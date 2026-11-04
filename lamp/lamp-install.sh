@@ -5,6 +5,8 @@
 
 set -e
 export DEBIAN_FRONTEND=noninteractive
+# "su" (ilma "-") jatab /usr/sbin PATH-ist valja -> lisan selle (dpkg vajab ldconfig'i)
+export PATH="/usr/local/sbin:/usr/sbin:/sbin:$PATH"
 
 # ---------- Muutujad ----------
 STUDENT="Janre Puuorg"
@@ -69,6 +71,13 @@ EOF
 deb [signed-by=${KEY}] http://repo.mysql.com/apt/debian/ bookworm mysql-apt-config
 deb [signed-by=${KEY}] http://repo.mysql.com/apt/debian/ bookworm mysql-8.0
 EOF
+        # MySQL 8.0 (bookworm) vajab libaio1, Debian 13-s on ainult libaio1t64
+        if ! pkg_installed libaio1; then
+            echo "Paigaldan libaio1 (bookworm) MySQL 8.0 jaoks..."
+            wget -q -O /tmp/libaio1.deb \
+                http://deb.debian.org/debian/pool/main/liba/libaio/libaio1_0.3.113-4_amd64.deb
+            dpkg -i /tmp/libaio1.deb
+        fi
     fi
 
     apt-get update -q
