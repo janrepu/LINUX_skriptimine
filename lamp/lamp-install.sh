@@ -95,3 +95,52 @@ EOF
     echo "/root/.my.cnf loodud."
 fi
 chmod 600 /root/.my.cnf
+
+# ---------- 3. Apache2 ----------
+echo "==> Apache2 kontroll..."
+if dpkg-query -W -f='${Package} ${Status}\n' apache2 2>/dev/null | grep -q "install ok installed"; then
+    echo "Apache2 on juba paigaldatud."
+else
+    echo "Apache2 puudub - paigaldan..."
+    apt-get install -y -q apache2
+fi
+
+# Teenus peab olema active ja enabled
+systemctl is-enabled --quiet apache2 || systemctl enable apache2
+systemctl is-active --quiet apache2 || systemctl start apache2
+
+# Apache vaikimisi veebileht
+INSTALL_TIME=$(date "+%Y-%m-%d %H:%M:%S")
+cat > /var/www/html/index.html <<EOF
+<!DOCTYPE html>
+<html lang="et">
+<head><meta charset="utf-8"><title>LAMP server</title></head>
+<body>
+<h1>LAMP server t&ouml;&ouml;tab!</h1>
+<p>LAMP paigaldus &otilde;nnestus.</p>
+<p>&Otilde;pilane: ${STUDENT}</p>
+<p>Grupp: ${GROUP}</p>
+<p>Paigaldatud: ${INSTALL_TIME}</p>
+</body>
+</html>
+EOF
+echo "Apache vaikimisi leht uuendatud."
+
+# ---------- 4. PHP 8.x ----------
+echo "==> PHP 8.x kontroll..."
+if command -v php >/dev/null 2>&1 && php -v | grep -q "^PHP 8\."; then
+    echo "PHP 8.x on juba paigaldatud: $(php -v | head -n1)"
+else
+    echo "PHP 8.x puudub - paigaldan..."
+    # Debian 12 -> PHP 8.2, Debian 13 -> PHP 8.4 (votan versiooni repost)
+    PHP_VER=$(apt-cache depends php 2>/dev/null | grep -o "php8\.[0-9]*" | head -n1 | sed 's/php//')
+    PHP_VER=${PHP_VER:-8.2}
+    apt-get install -y -q php${PHP_VER} php${PHP_VER}-cli php${PHP_VER}-common \
+        php${PHP_VER}-mysql libapache2-mod-php${PHP_VER}
+    systemctl restart apache2
+    echo "PHP paigaldatud: $(php -v | head -n1)"
+fi
+
+# PHP testfail
+echo "<?php phpinfo(); ?>" > /var/www/html/info.php
+
