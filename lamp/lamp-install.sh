@@ -144,3 +144,39 @@ fi
 # PHP testfail
 echo "<?php phpinfo(); ?>" > /var/www/html/info.php
 
+# ---------- 5. Kontrollid ja raport ----------
+APACHE_VER=$(apache2 -v | head -n1 | cut -d' ' -f3)
+PHP_V=$(php -v | head -n1 | cut -d' ' -f2)
+MYSQL_V=$(mysql --version | grep -o "[0-9]*\.[0-9]*\.[0-9]*" | head -n1)
+[ -f /root/.my.cnf ] && MYCNF="olemas" || MYCNF="PUUDUB"
+[ -f /var/www/html/index.html ] && IDX="olemas" || IDX="PUUDUB"
+[ -f /var/www/html/info.php ] && INFO="olemas" || INFO="PUUDUB"
+IP=$(hostname -I | awk '{print $1}')
+
+echo
+echo "=================================="
+echo "           LAMP REPORT            "
+echo "=================================="
+echo "Apache2:"
+echo "  Version:   ${APACHE_VER}"
+echo "  Status:    $(systemctl is-active apache2 || true)"
+echo "  Autostart: $(systemctl is-enabled apache2 || true)"
+echo
+echo "PHP:"
+echo "  Version:   ${PHP_V}"
+echo
+echo "MySQL:"
+echo "  Version:   ${MYSQL_V}"
+echo "  Status:    $(systemctl is-active mysql || true)"
+echo "  Autostart: $(systemctl is-enabled mysql || true)"
+echo "  Root login .my.cnf kaudu: $(mysql -N -e 'SELECT 1' >/dev/null 2>&1 && echo OK || echo VIGA)"
+echo
+echo "Apache default page:"
+echo "  /var/www/html/index.html - ${IDX}  (http://${IP}/)"
+echo
+echo "PHP test page:"
+echo "  /var/www/html/info.php - ${INFO}  (http://${IP}/info.php)"
+echo
+echo "MySQL root configuration:"
+echo "  /root/.my.cnf - ${MYCNF}"
+echo "=================================="
